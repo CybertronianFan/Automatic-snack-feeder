@@ -7,7 +7,7 @@ import serial
 import math
 
 #Assigning variables to real world values for a precise estimation
-webcam_focal_length = 1849 #This is specific to my webcam so change it with further instructions in the README
+webcam_focal_length = 1384 #This is specific to my webcam so change it with further instructions in the README
 interpupilary_distance = 6.5 #This is specific to my eyes so change it with further instructions in the README (in cm)
 
 #Measured lengths of the robot arm 
@@ -34,10 +34,16 @@ if not cap.isOpened():
 try:
     while True:
         ret, frame = cap.read()
+        cv2.imshow('Video Feed', frame)  
+
+        #Ends the camera feed if 'q' is pressed
+        if cv2.waitKey(1) == ord('q'):
+            print("Exiting...")
+            break 
 
         if not ret:
             print("Unable to recieve the frame")
-            break
+            break  
 
         #Converting frame for mediapipe        
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -56,7 +62,11 @@ try:
             right_eye_x = results.face_landmarks[0][263].x
             left_eye_x = results.face_landmarks[0][33].x
             pixel_eye_distance = (right_eye_x - left_eye_x) * 1280
+
+            print(pixel_eye_distance)
             distance = (interpupilary_distance * webcam_focal_length) / pixel_eye_distance
+
+            
 
             #Warning if the user is too far away in order to prevent a math error
             if distance > (UF + FG):
@@ -64,30 +74,22 @@ try:
                 continue
 
             #Calcuating angles using the cosine law (see README)
-            elbow_angle = math.degrees(math.acos((UF**2 + FG**2 - distance**2) / (2 * UF  * FG)))
-            shoulder_angle = math.degrees(math.acos((UF**2 + distance**2 - FG**2) / (2 * UF * distance)) )
+            elbow_angle = int(math.degrees(math.acos((UF**2 + FG**2 - distance**2) / (2 * UF  * FG))))
+            shoulder_angle = int(math.degrees(math.acos((UF**2 + distance**2 - FG**2) / (2 * UF * distance))))
 
 
 
             #Convert x and y values to pan and tilt 
             pan = int(np.interp(mouth_x, (0,1), (180, 0))) #Inverting x 
-            tilt = int(np.interp(mouth_y, (0,1), (180, 0))) #Inverting y
 
-            print(pan,tilt)
+            print(pan,shoulder_angle,elbow_angle)
 
             #Format the pan and tilt values for serial communication
-            message = f"{str(pan)},{str(tilt)}\n".encode()
+            message = f"{str(pan)},{str(shoulder_angle)},{str(elbow_angle)}\n".encode()
 
 
             #Send the values to the ESP32
-            ser.write(message)
-
-        cv2.imshow('Video Feed', frame)
-
-        #Ends the camera feed if 'q' is pressed
-        if cv2.waitKey(1) == ord('q'):
-            print("Exiting...")
-            break 
+            # ser.write(message)
 
 finally:
     ser.close()
