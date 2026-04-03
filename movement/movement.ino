@@ -26,5 +26,6 @@ void loop() {
     message = Serial.readStringUntil('\n');
     sscanf(message.c_str(), "%d,%d", &pan, &tilt);
     panServo.write(pan);
+    tiltServo.write(tilt);
   }
 }
