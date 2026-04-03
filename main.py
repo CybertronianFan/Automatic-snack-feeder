@@ -6,12 +6,14 @@ import numpy as np
 import serial
 
 
+webcam_focal_length = 1849 #This is specific to my webcam so change it with further instructions in the README
+interpupilary_distance = 6.5 #This is specific to my eyes so change it with further instructions in the README (in cm)
+
 base_options = python.BaseOptions(model_asset_path=r'D:\Github\Automatic-snack-feeder\face_landmarker.task') # 'r' means treat  the path as a raw string to '\n' is ignored if it is in the path. 
 
 options = vision.FaceLandmarkerOptions(
     base_options=base_options,
-    num_faces=1,
-    min_face_detection_confidence=0.7,
+    num_faces=1,min_face_detection_confidence=0.7,
     min_tracking_confidence=0.7
 )
 
@@ -42,12 +44,20 @@ try:
         #Checking for a face
         if results.face_landmarks:
             #Getting the mouth landmark(13)
-            x = results.face_landmarks[0][13].x
-            y = results.face_landmarks[0][13].y
+            mouth_x = results.face_landmarks[0][13].x
+            mouth_y = results.face_landmarks[0][13].y
+
+            right_eye_x = results.face_landmarks[0][263].x
+            left_eye_x = results.face_landmarks[0][33].x
+
+            pixel_eye_distance = (right_eye_x - left_eye_x) * 1280
+            
+            distance = (interpupilary_distance * webcam_focal_length) / pixel_eye_distance
 
             #Convert x and y values to pan and tilt 
-            pan = int(np.interp(x, (0,1), (180, 0))) #Inverting x 
-            tilt = int(np.interp(y, (0,1), (0, 180)))
+            pan = int(np.interp(mouth_x, (0,1), (180, 0))) #Inverting x 
+            tilt = int(np.interp(mouth_y, (0,1), (180, 0))) #Inverting y
+
             print(pan,tilt)
 
             #Format the pan and tilt values for serial communication
