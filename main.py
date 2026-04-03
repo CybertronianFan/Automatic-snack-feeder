@@ -63,10 +63,7 @@ try:
             left_eye_x = results.face_landmarks[0][33].x
             pixel_eye_distance = (right_eye_x - left_eye_x) * 1280
 
-            print(pixel_eye_distance)
             distance = (interpupilary_distance * webcam_focal_length) / pixel_eye_distance
-
-            
 
             #Warning if the user is too far away in order to prevent a math error
             if distance > (UF + FG):
