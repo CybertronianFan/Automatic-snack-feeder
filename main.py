@@ -3,9 +3,10 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
+import serial
 
 
-base_options = python.BaseOptions(model_asset_path=r'D:\Github\Autonomatic-snack-feeder\face_landmarker.task') # 'r' means treat  the path as a raw string to '\n' is ignored if it is in the path. 
+base_options = python.BaseOptions(model_asset_path=r'D:\Github\Automatic-snack-feeder\face_landmarker.task') # 'r' means treat  the path as a raw string to '\n' is ignored if it is in the path. 
 
 options = vision.FaceLandmarkerOptions(
     base_options=base_options,
@@ -15,6 +16,9 @@ options = vision.FaceLandmarkerOptions(
 )
 
 face_landmarker = vision.FaceLandmarker.create_from_options(options)
+
+#Establish serial connection
+ser = serial.Serial('COM3', 115200)
 
 cap = cv2.VideoCapture(0)
 
@@ -29,8 +33,8 @@ try:
             break
 
         #Converting frame for mediapipe        
-        RGB_Frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image_object = mp.Image(image_format=mp.ImageFormat.SRGB, data=RGB_Frame)
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mp_image_object = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
         #Running detection
         results = face_landmarker.detect(mp_image_object)
@@ -46,6 +50,13 @@ try:
             tilt = int(np.interp(y, (0,1), (0, 180)))
             print(pan,tilt)
 
+            #Format the pan and tilt values for serial communication
+            message = f"{str(pan)},{str(tilt)}\n".encode()
+
+
+            #Send the values to the ESP32
+            ser.write(message)
+
         cv2.imshow('Video Feed', frame)
 
         #Ends the camera feed if 'q' is pressed
@@ -54,5 +65,6 @@ try:
             break 
 
 finally:
+    ser.close()
     cap.release()
     cv2.destroyAllWindows()
