@@ -4,10 +4,15 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
 import serial
+import math
 
-
+#Assigning variables to real world values for a precise estimation
 webcam_focal_length = 1849 #This is specific to my webcam so change it with further instructions in the README
 interpupilary_distance = 6.5 #This is specific to my eyes so change it with further instructions in the README (in cm)
+
+#Measured lengths of the robot arm 
+UF = 8 #Upper arm servo pivot to forearm servo pivot
+FG = 14.2 #Forearm servo to gripper tip 
 
 base_options = python.BaseOptions(model_asset_path=r'D:\Github\Automatic-snack-feeder\face_landmarker.task') # 'r' means treat  the path as a raw string to '\n' is ignored if it is in the path. 
 
@@ -47,12 +52,22 @@ try:
             mouth_x = results.face_landmarks[0][13].x
             mouth_y = results.face_landmarks[0][13].y
 
+            #Calculating user distance based on the measurements of the eye locations
             right_eye_x = results.face_landmarks[0][263].x
             left_eye_x = results.face_landmarks[0][33].x
-
             pixel_eye_distance = (right_eye_x - left_eye_x) * 1280
-            
             distance = (interpupilary_distance * webcam_focal_length) / pixel_eye_distance
+
+            #Warning if the user is too far away in order to prevent a math error
+            if distance > (UF + FG):
+                print("Please get closer!")
+                continue
+
+            #Calcuating angles using the cosine law (see README)
+            elbow_angle = math.degrees(math.acos((UF**2 + FG**2 - distance**2) / (2 * UF  * FG)))
+            shoulder_angle = math.degrees(math.acos((UF**2 + distance**2 - FG**2) / (2 * UF * distance)) )
+
+
 
             #Convert x and y values to pan and tilt 
             pan = int(np.interp(mouth_x, (0,1), (180, 0))) #Inverting x 
